@@ -38,5 +38,6 @@ myCamera
       })
   })
   .catch(error => {
+    console.error('ERROR:', error)
     // TODO 自分のslackに通知
   })
