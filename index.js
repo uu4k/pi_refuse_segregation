@@ -2,6 +2,7 @@ require('dotenv').config()
 const dateformat = require('dateformat')
 const vision = require('@google-cloud/vision')
 const { Storage } = require('@google-cloud/storage')
+const tmp = require('tmp')
 
 const PLASTIC_BOTTLE_MID = '/m/02rlncx'
 const CAMERA_OUTPUT_PATH = `${__dirname}/refuse.jpg`
@@ -47,13 +48,36 @@ myCamera
 
         // Plastic bottleを検知する
         const detected = labels.some(label => {
-          console.debug(label.description + ':' + label.mid)
           return label.mid === PLASTIC_BOTTLE_MID
         })
 
         if (detected) {
           console.info('Detected Plastic Bottles.')
         }
+
+        // 結果もs3に送信
+        tmp.file((err, path, fd, cleanupCallback) => {
+          if (err) throw err
+
+          labels.forEach(l => {
+            fs.writeFileSync(path, label.description + ':' + label.mid)
+          })
+
+          storage
+            .bucket(bucketName)
+            .upload(CAMERA_OUTPUT_PATH, {
+              destination: `${dateformat(new Date(), 'yyyymmdd/hhMMss')}_${
+                detected ? 'detected' : 'none'
+              }.log`,
+              gzip: true
+            })
+            .then(res => {
+              console.info(`labels uploaded to ${bucketName}.`)
+            })
+            .catch(err => {
+              console.error('ERROR:', err)
+            })
+        })
       })
       .catch(err => {
         console.error('ERROR:', err)
