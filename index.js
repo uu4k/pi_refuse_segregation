@@ -3,6 +3,7 @@ const dateformat = require('dateformat')
 const vision = require('@google-cloud/vision')
 const { Storage } = require('@google-cloud/storage')
 const tmp = require('tmp')
+const fs = require('fs')
 
 const PLASTIC_BOTTLE_MID = '/m/02rlncx'
 const CAMERA_OUTPUT_PATH = `${__dirname}/refuse.jpg`
@@ -23,6 +24,8 @@ const bucketName = process.env.BUCKET_NAME
 
 const client = new vision.ImageAnnotatorClient()
 
+const now = new Date()
+
 myCamera
   .snap()
   .then(result => {
@@ -31,7 +34,7 @@ myCamera
     storage
       .bucket(bucketName)
       .upload(CAMERA_OUTPUT_PATH, {
-        destination: `${dateformat(new Date(), 'yyyymmdd/hhMMss')}.jpg`,
+        destination: `${dateformat(now, 'yyyymmdd/hhMMss')}.jpg`,
         gzip: true
       })
       .then(res => {
@@ -59,14 +62,14 @@ myCamera
         tmp.file((err, path, fd, cleanupCallback) => {
           if (err) throw err
 
-          labels.forEach(l => {
+          labels.forEach(label => {
             fs.writeFileSync(path, label.description + ':' + label.mid)
           })
 
           storage
             .bucket(bucketName)
             .upload(CAMERA_OUTPUT_PATH, {
-              destination: `${dateformat(new Date(), 'yyyymmdd/hhMMss')}_${
+              destination: `${dateformat(now, 'yyyymmdd/hhMMss')}_${
                 detected ? 'detected' : 'none'
               }.log`,
               gzip: true
